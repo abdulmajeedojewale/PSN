@@ -27,8 +27,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static uploads folder
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Read-only filesystem in serverless environments
 }
 app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -449,8 +453,12 @@ app.get('/api/audit-logs', authMiddleware, requireRole('Administrator'), (req, r
   return res.json(logs);
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`[PSN Backend Server] Running on http://localhost:${PORT}`);
-  console.log(`[PSN Backend Server] Uploads directory: ${UPLOADS_DIR}`);
-});
+// Start Server if run as standalone process
+if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`[PSN Backend Server] Running on http://localhost:${PORT}`);
+    console.log(`[PSN Backend Server] Uploads directory: ${UPLOADS_DIR}`);
+  });
+}
+
+export default app;
